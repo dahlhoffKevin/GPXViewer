@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GPX to Map Viewer</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
+  />
+  <style>
+    #map {
+      height: 500px;
+      margin-top: 20px;
+    }
+    .container {
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    .coordinates {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    .stats {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+  />
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="container-fluid">
+    <ul>
+      <li><strong>GPX to Map Viewer</strong></li>
+    </ul>
+    <ul>
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Upload GPX</a></li>
+      <li><a href="#" role="button">View on Map</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="grid">
+      <section>
+        <hgroup>
+          <h2>Upload Your GPX File</h2>
+          <h3>Easily display GPX coordinates on OpenStreetMap</h3>
+        </hgroup>
+        <p>Select a GPX file to display its path on the map below.</p>
+        <!-- WICHTIG: type="button" verhindert ungewollten Submit/Reload -->
+        <form>
+          <input type="file" id="gpxFile" accept=".gpx" />
+          <button type="button" id="displayButton">Display on Map</button>
+        </form>
+
+        <!-- Hier wird die Karte angezeigt -->
+        <div id="map"></div>
+
+        <!-- Statistiken zur Route -->
+        <div class="stats hidden" id="stats">
+          <h3>Route Statistics</h3>
+          <strong>Distance:</strong> <span id="distance"></span>
+          <p><strong>Travel Time:</strong> <span id="travelTime"></span></p>
+        </div>
+
+        <h3>Coordinates</h3>
+        <div class="coordinates hidden" id="coordinates"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="container">
+    <small
+      ><a href="#">Contact</a> • <a href="#">Privacy Policy</a> •
+      <a href="#">GitHub</a></small
+    >
+  </footer>
+
+  <!-- JavaScript Libraries -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/togpx/0.1.3/togpx.js"
+    defer
+  ></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"
+    defer
+  ></script>
+
+  <script>
+    // -----------------------------------------------------------
+    // 0) Leaflet-Icons von CDN holen, um 404-Fehler zu vermeiden
+    // -----------------------------------------------------------
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+    });
+
+    // -----------------------------------------------------------
+    // 1) Initialisiere die Karte (nur einmal!)
+    // -----------------------------------------------------------
+    var zoom = 13; // Standard-Zoom festlegen
+    var map = L.map("map").setView([51.505, -0.09], zoom);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    // -----------------------------------------------------------
+    // 2) Distanzberechnung zwischen zwei Punkten
+    // -----------------------------------------------------------
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      var R = 6371e3; // Erd-Radius in Metern
+      var φ1 = (lat1 * Math.PI) / 180;
+      var φ2 = (lat2 * Math.PI) / 180;
+      var Δφ = ((lat2 - lat1) * Math.PI) / 180;
+      var Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+      var a =
+        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distanz in Metern
+    }
+
+    // -----------------------------------------------------------
+    // 3) Upload-Funktion: Sende die Daten an den Server
+    // -----------------------------------------------------------
+    function uploadGpxDataToServer(payload) {
+      fetch("http://localhost:3000/api/upload-gpx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("Speichern in DB erfolgreich:", data);
+
+          // Optional: Fehler abfangen, falls die DB meldet, dass die Datei existiert
+          if (data.error) {
+            alert(data.message || "Fehler beim Upload");
+          }
+        })
+        .catch((error) => {
+          console.error("Fehler beim Upload:", error);
+        });
+    }
+
+    // -----------------------------------------------------------
+    // 4) GPX-Datei einlesen, parsen & auf der Karte anzeigen
+    // -----------------------------------------------------------
+    document
+      .getElementById("displayButton")
+      .addEventListener("click", function () {
+        var fileInput = document.getElementById("gpxFile");
+        var coordinatesDiv = document.getElementById("coordinates");
+        var statsDiv = document.getElementById("stats");
+        var distanceSpan = document.getElementById("distance");
+        var travelTimeSpan = document.getElementById("travelTime");
+
+        if (fileInput.files.length === 0) {
+          alert("Please select a GPX file.");
+          return;
+        }
+
+        var file = fileInput.files[0];
+        var reader = new FileReader();
+
+        reader.onload = function (e) {
+          // -------------------------------------------------------
+          // A) Fahrername und Kennzeichen aus dem Dateinamen parsen
+          // -------------------------------------------------------
+          var baseName = file.name; // z.B. "AA_WITAA000_001.gpx"
+          // ".gpx" entfernen
+          var withoutExt = baseName.replace(/\.gpx$/i, "");
+          // An "_" aufsplitten
+          var parts = withoutExt.split("_"); 
+          // Falls die Datei nicht dem Muster entspricht, abfangen
+          if (parts.length < 2) {
+            // Minimal: wir erwarten [<Fahrer>, <Kennzeichen>, ...]
+            alert("Dateiname entspricht nicht dem erwarteten Format.");
+            return;
+          }
+          var driverName = parts[0];       // "AA"
+          var vehiclePlate = parts[1];     // "WITAA000"
+
+          // -------------------------------------------------------
+          // B) GPX in Leaflet laden
+          // -------------------------------------------------------
+          var gpxData = e.target.result;
+          var gpxLayer = new L.GPX(gpxData, { async: true })
+            .on("loaded", function (evt) {
+              // Karte automatisch auf Bounds zoomen
+              map.fitBounds(evt.target.getBounds());
+            })
+            .addTo(map);
+
+          // -------------------------------------------------------
+          // C) GPX-Daten parsen (für Distanz, Start/End-Zeit, Koords)
+          // -------------------------------------------------------
+          var parser = new DOMParser();
+          var gpxDoc = parser.parseFromString(gpxData, "text/xml");
+          var points = gpxDoc.getElementsByTagName("trkpt");
+          var coordinatesText = "";
+          var totalDistance = 0;
+
+          var startTime, endTime;
+          var startLat, startLon, endLat, endLon;
+          var allPoints = [];
+
+          for (var i = 0; i < points.length; i++) {
+            var lat = parseFloat(points[i].getAttribute("lat"));
+            var lon = parseFloat(points[i].getAttribute("lon"));
+            coordinatesText += "Lat: " + lat + ", Lon: " + lon + "<br>";
+
+            var timeTags = points[i].getElementsByTagName("time");
+            var timestamp = timeTags.length
+              ? new Date(timeTags[0].textContent)
+              : null;
+
+            if (i > 0) {
+              var prevLat = parseFloat(points[i - 1].getAttribute("lat"));
+              var prevLon = parseFloat(points[i - 1].getAttribute("lon"));
+              totalDistance += calculateDistance(prevLat, prevLon, lat, lon);
+            }
+
+            if (i === 0) {
+              startLat = lat;
+              startLon = lon;
+              startTime = timestamp;
+            }
+            if (i === points.length - 1) {
+              endLat = lat;
+              endLon = lon;
+              endTime = timestamp;
+            }
+
+            allPoints.push({
+              lat: lat,
+              lon: lon,
+              timestamp: timestamp ? timestamp.toISOString() : null,
+            });
+          }
+
+          // Ausgabe im Frontend
+          coordinatesDiv.innerHTML = coordinatesText;
+          coordinatesDiv.classList.remove("hidden");
+
+          var distanceInKm = (totalDistance / 1000).toFixed(2);
+          distanceSpan.textContent = distanceInKm + " km";
+
+          if (startTime && endTime) {
+            var diffMs = endTime - startTime;
+            var diffHours = diffMs / (1000 * 60 * 60);
+            travelTimeSpan.textContent = diffHours.toFixed(2) + " hours";
+          } else {
+            travelTimeSpan.textContent = "Not available";
+          }
+          statsDiv.classList.remove("hidden");
+
+          // -------------------------------------------------------
+          // D) Payload erstellen (Backend erwartet driver_name, vehicle_plate)
+          // -------------------------------------------------------
+          var payload = {
+            file_name: baseName,              // z.B. "AA_WITAA000_001.gpx"
+            driver_name: driverName,          // "AA"
+            vehicle_plate: vehiclePlate,      // "WITAA000"
+            start_time: startTime ? startTime.toISOString() : null,
+            end_time: endTime ? endTime.toISOString() : null,
+            start_lat: startLat,
+            start_lon: startLon,
+            end_lat: endLat,
+            end_lon: endLon,
+            distance: parseFloat(distanceInKm),
+            points: allPoints
+          };
+
+          // -------------------------------------------------------
+          // E) Upload an Server
+          // -------------------------------------------------------
+          uploadGpxDataToServer(payload);
+        };
+
+        // Datei einlesen (Textinhalt)
+        reader.readAsText(file);
+      });
+  </script>
+</body>
+</html>

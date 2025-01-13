@@ -1,0 +1,10 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "gpx",
+            "database": "${workspaceFolder:gpx-to-map-viewer}/server/database.db"
+        }
+    ]
+}

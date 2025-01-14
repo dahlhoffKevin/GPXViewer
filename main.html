@@ -1,379 +1,443 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GPX on Map Viewer</title>
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-  />
-  <style>
-    body, main {
-      margin: 0;
-      padding: 0;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GPX on Map Viewer</title>
+    <link
+      rel="icon"
+      href="https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png"
+      type="image/png"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    />
+    <style>
+      body,
+      main {
+        margin: 0;
+        padding: 0;
+      }
 
-    #map {
-      height: 500px;
-      margin-top: 20px;
-    }
-    .container {
-      padding: 20px;
-    }
-    .hidden {
-      display: none;
-    }
-    .coordinates {
-      margin-top: 20px;
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 10px;
-      border: 1px solid #ccc;
-    }
-    .stats {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-    }
-    .container-grid {
-      display: grid;
-      grid-template-columns: 400px 1fr;
-      gap: 1rem;
-      padding: 0;
-      max-width: 90%;
-    }
-    #fileList {
-      padding: 0.5rem;
-      max-height: 850px;
-      overflow-y: auto;
-    }
-    #fileListUL {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    #fileListUL li {
-      cursor: pointer;
-      margin-bottom: 0.5rem;
-      text-decoration: underline;
-    }
-  </style>
-</head>
-<body>
-  <nav class="container-fluid">
-    <ul>
-      <li><strong>GPX on Map Viewer</strong></li>
-    </ul>
-  </nav>
+      #map {
+        height: 500px;
+        margin-top: 20px;
+      }
+      .container {
+        padding: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .coordinates {
+        margin-top: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      .stats {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      .container-grid {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 1rem;
+        padding: 0;
+        max-width: 90%;
+      }
+      #fileList {
+        padding: 0.5rem;
+        max-height: 850px;
+        overflow-y: auto;
+      }
+      #fileListUL {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #fileListUL li {
+        cursor: pointer;
+        margin-bottom: 0.5rem;
+        text-decoration: underline;
+      }
+      .leaflet-control {
+        box-shadow: none !important; /* Reset unwanted shadow */
+        border: none !important; /* Remove extra borders */
+      }
+      .leaflet-control-zoom a {
+        background-color: white !important; /* Ensure correct button background */
+        color: black !important; /* Ensure correct button text color */
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="container-fluid">
+      <ul>
+        <li><strong>GPX on Map Viewer</strong></li>
+      </ul>
+    </nav>
 
-  <main class="container container-grid">
-    <aside id="fileList">
-      <h3>Uploaded GPX Files</h3>
-      <div>
-        <label for="driverFilter">Filter by Driver:</label>
-        <select id="driverFilter">
-          <option value="">All Drivers</option>
-        </select>
-      </div>
-      <div>
-        <label for="vehicleFilter">Filter by Vehicle:</label>
-        <select id="vehicleFilter">
-          <option value="">All Vehicles</option>
-        </select>
-      </div>
-      <ul id="fileListUL"></ul>
-    </aside>
-
-    <div class="grid">
-      <section>
-        <hgroup>
-          <h2>Upload Your GPX File</h2>
-          <h3>Easily display GPX coordinates on OpenStreetMap</h3>
-        </hgroup>
-        <p>Select a GPX file to display its path on the map below.</p>
-        <form>
-          <input type="file" id="gpxFile" accept=".gpx" />
-          <button type="button" id="displayButton">Display on Map</button>
-        </form>
-        <div id="map"></div>
-        <div class="stats hidden" id="stats">
-          <h3>Route Statistics</h3>
-          <strong>Distance:</strong> <span id="distance"></span>
-          <p><strong>Travel Time:</strong> <span id="travelTime"></span></p>
+    <main class="container container-grid">
+      <aside id="fileList">
+        <h3>Uploaded GPX Files</h3>
+        <div>
+          <label for="driverFilter">Filter by Driver:</label>
+          <select id="driverFilter">
+            <option value="">All Drivers</option>
+          </select>
         </div>
-      </section>
-    </div>
-  </main>
+        <div>
+          <label for="vehicleFilter">Filter by Vehicle:</label>
+          <select id="vehicleFilter">
+            <option value="">All Vehicles</option>
+          </select>
+        </div>
+        <div>
+          <label for="dateSort">Sort by Date:</label>
+          <select id="dateSort">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
+        <ul id="fileListUL"></ul>
+      </aside>
 
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/togpx/0.1.3/togpx.js"
-    defer
-  ></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"
-    defer
-  ></script>
-  <script>
-    const map = L.map("map").setView([51.505, -0.09], 13);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+      <div class="grid">
+        <section>
+          <hgroup>
+            <h2>Upload Or Choose Your GPX File</h2>
+            <h3>Display GPX coordinates on OpenStreetMap</h3>
+          </hgroup>
+          <form>
+            <input type="file" id="gpxFile" accept=".gpx" />
+            <button type="button" id="displayButton">Display on Map</button>
+          </form>
+          <div id="map"></div>
+          <div class="stats hidden" id="stats">
+            <h3>Route Statistics</h3>
+            <strong>Distance:</strong> <span id="distance"></span>
+            <p><strong>Travel Time:</strong> <span id="travelTime"></span></p>
+          </div>
+        </section>
+      </div>
+    </main>
 
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-    });
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/togpx/0.1.3/togpx.js"
+      defer
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"
+      defer
+    ></script>
+    <script>
+      const map = L.map("map").setView(
+        [51.48285528456684, 7.217311029554216],
+        13
+      );
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371e3;
-      const φ1 = (lat1 * Math.PI) / 180;
-      const φ2 = (lat2 * Math.PI) / 180;
-      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl:
+          "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+        shadowUrl:
+          "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+      });
 
-      const a =
-        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const φ1 = (lat1 * Math.PI) / 180;
+        const φ2 = (lat2 * Math.PI) / 180;
+        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+        const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    async function uploadGpxDataToServer(payload) {
-      try {
-        const response = await fetch("http://localhost:3000/api/upload-gpx", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await response.json();
+        const a =
+          Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
 
-        if (data.error) {
-          alert(data.message || "Error uploading file.");
-        } else {
-          console.log("File uploaded successfully:", data);
-          loadFileList();
-          loadAndDisplayGPX(payload.file_name);
+      async function uploadGpxDataToServer(payload) {
+        try {
+          const response = await fetch("http://localhost:3000/api/upload-gpx", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+
+          if (data.error) {
+            alert(data.message || "Error uploading file.");
+          } else {
+            console.log("File uploaded successfully:", data);
+            loadFileList();
+            loadAndDisplayGPX(payload.file_name);
+          }
+        } catch (error) {
+          console.error("Error uploading GPX file:", error);
         }
-      } catch (error) {
-        console.error("Error uploading GPX file:", error);
       }
-    }
 
-    async function loadFileList() {
-      try {
-        const response = await fetch("http://localhost:3000/api/files");
-        const data = await response.json();
+      async function loadFileList() {
+        try {
+          const response = await fetch("http://localhost:3000/api/files");
+          const data = await response.json();
 
-        updateFileFilters(data.files);
-        displayFileList(data.files);
-        addFilterEventListeners(data.files);
-      } catch (error) {
-        console.error("Error loading file list:", error);
+          updateFileFilters(data.files);
+          displayFileList(data.files);
+          addFilterEventListeners(data.files);
+        } catch (error) {
+          console.error("Error loading file list:", error);
+        }
       }
-    }
 
-    function updateFileFilters(files) {
-      const driverFilter = document.getElementById("driverFilter");
-      const vehicleFilter = document.getElementById("vehicleFilter");
+      function updateFileFilters(files) {
+        const driverFilter = document.getElementById("driverFilter");
+        const vehicleFilter = document.getElementById("vehicleFilter");
 
-      const drivers = new Set();
-      const vehicles = new Set();
+        const drivers = new Set();
+        const vehicles = new Set();
 
-      files.forEach((file) => {
-        const [driver, vehicleWithTrip] = file.file_name.split("_");
-        const vehicle = vehicleWithTrip.split("_")[0];
-        drivers.add(driver);
-        vehicles.add(vehicle);
-      });
-
-      populateDropdown(driverFilter, Array.from(drivers));
-      populateDropdown(vehicleFilter, Array.from(vehicles));
-    }
-
-    function populateDropdown(dropdown, options) {
-      dropdown.innerHTML = '<option value="">All</option>';
-      options.forEach((option) => {
-        const opt = document.createElement("option");
-        opt.value = option;
-        opt.textContent = option;
-        dropdown.appendChild(opt);
-      });
-    }
-
-    function displayFileList(files) {
-      const fileListUL = document.getElementById("fileListUL");
-      fileListUL.innerHTML = "";
-
-      files.forEach((file) => {
-        const li = document.createElement("li");
-        li.textContent = `${file.file_name} (${file.uploaded_at})`;
-        li.addEventListener("click", () => loadAndDisplayGPX(file.file_name));
-        fileListUL.appendChild(li);
-      });
-    }
-
-    async function loadAndDisplayGPX(fileName) {
-      try {
-        const response = await fetch(
-          `http://localhost:3000/api/gpx-file?fileName=${encodeURIComponent(fileName)}`
-        );
-        const gpxData = await response.text();
-
-        const gpxLayer = new L.GPX(gpxData, {
-          async: true,
-          marker_options: {
-            startIconUrl:
-              "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-            endIconUrl:
-              "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-            shadowUrl:
-              "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-          },
-        })
-          .on("loaded", (evt) => {
-            map.fitBounds(evt.target.getBounds());
-
-            const parser = new DOMParser();
-            const gpxDoc = parser.parseFromString(gpxData, "text/xml");
-            const points = Array.from(gpxDoc.getElementsByTagName("trkpt"));
-            const allPoints = [];
-            let totalDistance = 0;
-
-            points.forEach((point, i) => {
-              const lat = parseFloat(point.getAttribute("lat"));
-              const lon = parseFloat(point.getAttribute("lon"));
-              const time = point.getElementsByTagName("time")[0]?.textContent || null;
-              const timestamp = time ? new Date(time).toISOString() : null;
-
-              if (i > 0) {
-                const prev = points[i - 1];
-                const prevLat = parseFloat(prev.getAttribute("lat"));
-                const prevLon = parseFloat(prev.getAttribute("lon"));
-                totalDistance += calculateDistance(prevLat, prevLon, lat, lon);
-              }
-
-              allPoints.push({ lat, lon, timestamp });
-            });
-
-            const startTime = allPoints[0]?.timestamp;
-            const endTime = allPoints[allPoints.length - 1]?.timestamp;
-            const distanceInKm = (totalDistance / 1000).toFixed(2);
-
-            document.getElementById("distance").textContent = `${distanceInKm} km`;
-            document.getElementById("travelTime").textContent =
-              startTime && endTime
-                ? `${((new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60)).toFixed(2)} hours`
-                : "Not available";
-
-            document.getElementById("stats").classList.remove("hidden");
-          })
-          .addTo(map);
-      } catch (error) {
-        console.error("Error loading GPX file:", error);
-      }
-    }
-
-    function addFilterEventListeners(files) {
-      const driverFilter = document.getElementById("driverFilter");
-      const vehicleFilter = document.getElementById("vehicleFilter");
-
-      function applyFilters() {
-        const selectedDriver = driverFilter.value;
-        const selectedVehicle = vehicleFilter.value;
-
-        const filteredFiles = files.filter((file) => {
+        files.forEach((file) => {
           const [driver, vehicleWithTrip] = file.file_name.split("_");
           const vehicle = vehicleWithTrip.split("_")[0];
-          const matchesDriver = !selectedDriver || driver === selectedDriver;
-          const matchesVehicle = !selectedVehicle || vehicle === selectedVehicle;
-          return matchesDriver && matchesVehicle;
+          drivers.add(driver);
+          vehicles.add(vehicle);
         });
 
-        displayFileList(filteredFiles);
+        populateDropdown(driverFilter, Array.from(drivers));
+        populateDropdown(vehicleFilter, Array.from(vehicles));
       }
 
-      driverFilter.addEventListener("change", applyFilters);
-      vehicleFilter.addEventListener("change", applyFilters);
-    }
-
-    document.getElementById("displayButton").addEventListener("click", () => {
-      const fileInput = document.getElementById("gpxFile");
-      if (!fileInput.files.length) {
-        alert("Please select a GPX file.");
-        return;
+      function populateDropdown(dropdown, options) {
+        dropdown.innerHTML = '<option value="">All</option>';
+        options.forEach((option) => {
+          const opt = document.createElement("option");
+          opt.value = option;
+          opt.textContent = option;
+          dropdown.appendChild(opt);
+        });
       }
 
-      const file = fileInput.files[0];
-      const reader = new FileReader();
+      function displayFileList(files) {
+        const fileListUL = document.getElementById("fileListUL");
+        const dateSort = document.getElementById("dateSort").value; // Get selected sort order
 
-      reader.onload = (e) => {
-        const gpxData = e.target.result;
-        const baseName = file.name.replace(/\.gpx$/i, "");
-        const [driverName, vehiclePlate] = baseName.split("_");
-        if (!driverName || !vehiclePlate) {
-          alert("Invalid file name format.");
+        // Sort files based on upload date
+        const sortedFiles = files.sort((a, b) => {
+          const dateA = new Date(a.uploaded_at);
+          const dateB = new Date(b.uploaded_at);
+
+          return dateSort === "oldest"
+            ? dateA - dateB // Oldest first
+            : dateB - dateA; // Newest first
+        });
+
+        fileListUL.innerHTML = ""; // Clear the file list
+
+        sortedFiles.forEach((file) => {
+          const li = document.createElement("li");
+          li.textContent = `${file.file_name} (${file.uploaded_at})`;
+          li.addEventListener("click", () => loadAndDisplayGPX(file.file_name));
+          fileListUL.appendChild(li);
+        });
+      }
+
+      async function loadAndDisplayGPX(fileName) {
+        try {
+          const response = await fetch(
+            `http://localhost:3000/api/gpx-file?fileName=${encodeURIComponent(
+              fileName
+            )}`
+          );
+          const gpxData = await response.text();
+
+          const gpxLayer = new L.GPX(gpxData, {
+            async: true,
+            marker_options: {
+              startIconUrl:
+                "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+              endIconUrl:
+                "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+              shadowUrl:
+                "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+            },
+          })
+            .on("loaded", (evt) => {
+              map.fitBounds(evt.target.getBounds());
+
+              const parser = new DOMParser();
+              const gpxDoc = parser.parseFromString(gpxData, "text/xml");
+              const points = Array.from(gpxDoc.getElementsByTagName("trkpt"));
+              const allPoints = [];
+              let totalDistance = 0;
+
+              points.forEach((point, i) => {
+                const lat = parseFloat(point.getAttribute("lat"));
+                const lon = parseFloat(point.getAttribute("lon"));
+                const time =
+                  point.getElementsByTagName("time")[0]?.textContent || null;
+                const timestamp = time ? new Date(time).toISOString() : null;
+
+                if (i > 0) {
+                  const prev = points[i - 1];
+                  const prevLat = parseFloat(prev.getAttribute("lat"));
+                  const prevLon = parseFloat(prev.getAttribute("lon"));
+                  totalDistance += calculateDistance(
+                    prevLat,
+                    prevLon,
+                    lat,
+                    lon
+                  );
+                }
+
+                allPoints.push({ lat, lon, timestamp });
+              });
+
+              const startTime = allPoints[0]?.timestamp;
+              const endTime = allPoints[allPoints.length - 1]?.timestamp;
+              const distanceInKm = (totalDistance / 1000).toFixed(2);
+
+              document.getElementById(
+                "distance"
+              ).textContent = `${distanceInKm} km`;
+              document.getElementById("travelTime").textContent =
+                startTime && endTime
+                  ? `${(
+                      (new Date(endTime) - new Date(startTime)) /
+                      (1000 * 60 * 60)
+                    ).toFixed(2)} hours`
+                  : "Not available";
+
+              document.getElementById("stats").classList.remove("hidden");
+            })
+            .addTo(map);
+        } catch (error) {
+          console.error("Error loading GPX file:", error);
+        }
+      }
+
+      function addFilterEventListeners(files) {
+        const driverFilter = document.getElementById("driverFilter");
+        const vehicleFilter = document.getElementById("vehicleFilter");
+        const dateSort = document.getElementById("dateSort");
+
+        function applyFilters() {
+          const selectedDriver = driverFilter.value;
+          const selectedVehicle = vehicleFilter.value;
+
+          const filteredFiles = files.filter((file) => {
+            const [driver, vehicleWithTrip] = file.file_name.split("_");
+            const vehicle = vehicleWithTrip.split("_")[0];
+            const matchesDriver = !selectedDriver || driver === selectedDriver;
+            const matchesVehicle = !selectedVehicle || vehicle === selectedVehicle;
+            return matchesDriver && matchesVehicle;
+          });
+
+          displayFileList(filteredFiles);
+        }
+
+        driverFilter.addEventListener("change", applyFilters);
+        vehicleFilter.addEventListener("change", applyFilters);
+        dateSort.addEventListener("change", applyFilters); // Trigger sorting on change
+      }
+
+      document.getElementById("displayButton").addEventListener("click", () => {
+        const fileInput = document.getElementById("gpxFile");
+        if (!fileInput.files.length) {
+          alert("Please select a GPX file.");
           return;
         }
 
-        const parser = new DOMParser();
-        const gpxDoc = parser.parseFromString(gpxData, "text/xml");
-        const points = Array.from(gpxDoc.getElementsByTagName("trkpt"));
-        const allPoints = [];
-        let totalDistance = 0;
+        const file = fileInput.files[0];
+        const reader = new FileReader();
 
-        points.forEach((point, i) => {
-          const lat = parseFloat(point.getAttribute("lat"));
-          const lon = parseFloat(point.getAttribute("lon"));
-          const time = point.getElementsByTagName("time")[0]?.textContent || null;
-          const timestamp = time ? new Date(time).toISOString() : null;
-
-          if (i > 0) {
-            const prev = points[i - 1];
-            const prevLat = parseFloat(prev.getAttribute("lat"));
-            const prevLon = parseFloat(prev.getAttribute("lon"));
-            totalDistance += calculateDistance(prevLat, prevLon, lat, lon);
+        reader.onload = (e) => {
+          const gpxData = e.target.result;
+          const baseName = file.name.replace(/\.gpx$/i, "");
+          const [driverName, vehiclePlate] = baseName.split("_");
+          if (!driverName || !vehiclePlate) {
+            alert("Invalid file name format.");
+            return;
           }
 
-          allPoints.push({ lat, lon, timestamp });
-        });
+          const parser = new DOMParser();
+          const gpxDoc = parser.parseFromString(gpxData, "text/xml");
+          const points = Array.from(gpxDoc.getElementsByTagName("trkpt"));
+          const allPoints = [];
+          let totalDistance = 0;
 
-        const startTime = allPoints[0]?.timestamp;
-        const endTime = allPoints[allPoints.length - 1]?.timestamp;
-        const distanceInKm = (totalDistance / 1000).toFixed(2);
+          points.forEach((point, i) => {
+            const lat = parseFloat(point.getAttribute("lat"));
+            const lon = parseFloat(point.getAttribute("lon"));
+            const time =
+              point.getElementsByTagName("time")[0]?.textContent || null;
+            const timestamp = time ? new Date(time).toISOString() : null;
 
-        document.getElementById("distance").textContent = `${distanceInKm} km`;
-        document.getElementById("travelTime").textContent =
-          startTime && endTime
-            ? `${((new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60)).toFixed(2)} hours`
-            : "Not available";
+            if (i > 0) {
+              const prev = points[i - 1];
+              const prevLat = parseFloat(prev.getAttribute("lat"));
+              const prevLon = parseFloat(prev.getAttribute("lon"));
+              totalDistance += calculateDistance(prevLat, prevLon, lat, lon);
+            }
 
-        document.getElementById("stats").classList.remove("hidden");
+            allPoints.push({ lat, lon, timestamp });
+          });
 
-        const payload = {
-          file_name: file.name,
-          driver_name: driverName,
-          vehicle_plate: vehiclePlate,
-          start_time: startTime,
-          end_time: endTime,
-          distance: parseFloat(distanceInKm),
-          points: allPoints,
-          gpx_content: gpxData,
+          const startTime = allPoints[0]?.timestamp;
+          const endTime = allPoints[allPoints.length - 1]?.timestamp;
+          const distanceInKm = (totalDistance / 1000).toFixed(2);
+
+          document.getElementById(
+            "distance"
+          ).textContent = `${distanceInKm} km`;
+          document.getElementById("travelTime").textContent =
+            startTime && endTime
+              ? `${(
+                  (new Date(endTime) - new Date(startTime)) /
+                  (1000 * 60 * 60)
+                ).toFixed(2)} hours`
+              : "Not available";
+
+          document.getElementById("stats").classList.remove("hidden");
+
+          const payload = {
+            file_name: file.name,
+            driver_name: driverName,
+            vehicle_plate: vehiclePlate,
+            start_time: startTime,
+            end_time: endTime,
+            distance: parseFloat(distanceInKm),
+            points: allPoints,
+            gpx_content: gpxData,
+          };
+
+          uploadGpxDataToServer(payload);
         };
 
-        uploadGpxDataToServer(payload);
-      };
+        reader.readAsText(file);
+      });
 
-      reader.readAsText(file);
-    });
-
-    window.addEventListener("DOMContentLoaded", loadFileList);
-  </script>
-</body>
+      window.addEventListener("DOMContentLoaded", loadFileList);
+    </script>
+  </body>
 </html>

@@ -233,7 +233,7 @@ app.get("/api/gpx-file", (req, res) => {
       return res.status(404).json({ error: "File not found in database" });
     }
 
-    res.type("application/xml"); // GPX is XML-based, so set the correct content type
+    res.type("application/xml");
     res.send(row.gpx_content);
   });
 });
